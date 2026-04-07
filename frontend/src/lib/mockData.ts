@@ -13,10 +13,12 @@ export const mockAlerts: Alert[] = [
     id: "a1",
     type: "fire",
     location: "Floor 3: Room 305",
+    floor: "3",
     severity: "high",
     message: "FIRE ALERT - Floor 3: Room 305 - Evacuate via Staircase B",
     timestamp: new Date().toISOString(),
     actionRequired: "Evacuate",
+    status: "active",
   }
 ];
 

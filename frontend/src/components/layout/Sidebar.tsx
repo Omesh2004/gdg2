@@ -8,6 +8,7 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { toggleSidebar } from "@/store/slices/systemSlice";
 import { cn } from "@/lib/utils";
 import { SITE_LOGO_PATH } from "@/lib/branding";
+import type { AuthRole } from "@/lib/auth";
 import {
   AlertTriangle,
   ChevronLeft,
@@ -19,7 +20,14 @@ import {
   Wrench,
 } from "lucide-react";
 
-const navItems = [
+type NavItem = {
+  label: string;
+  icon: typeof House;
+  href: string;
+  roles: AuthRole[];
+};
+
+const navItems: NavItem[] = [
   { label: "Home", icon: House, href: "/", roles: ["admin", "security", "staff", "maintenance"] },
   { label: "Alerts", icon: AlertTriangle, href: "/alerts", roles: ["admin", "security", "staff", "maintenance"] },
   { label: "People", icon: Users, href: "/people", roles: ["admin", "security", "staff", "maintenance"] },
@@ -27,7 +35,7 @@ const navItems = [
   { label: "Security", icon: Shield, href: "/security", roles: ["admin", "security"] },
   { label: "Maintenance", icon: Wrench, href: "/maintenance", roles: ["admin", "maintenance"] },
   { label: "Settings", icon: Settings, href: "/settings", roles: ["admin", "security", "staff", "maintenance"] },
-] as const;
+];
 
 export function Sidebar() {
   const pathname = usePathname();
