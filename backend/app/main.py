@@ -16,11 +16,17 @@ async def lifespan(app: FastAPI):
     consumer_task = None
     if settings.ENABLE_INFRA_ON_STARTUP:
         print("Starting up Connections (Kafka, Redis, MongoDB, Neo4j)...")
-        await db_client.connect_to_databases()
-        await kafka_client.start_producer()
+        try:
+            await db_client.connect_to_databases()
+        except Exception as exc:
+            print(f"[startup-warning] Failed to connect to databases: {exc}")
 
-        # Start consumer tasks in the background
-        consumer_task = asyncio.create_task(start_anomaly_consumer())
+        try:
+            await kafka_client.start_producer()
+            # Start consumer tasks in the background
+            consumer_task = asyncio.create_task(start_anomaly_consumer())
+        except Exception as exc:
+            print(f"[startup-warning] Failed to start Kafka producer: {exc}")
     else:
         print("Skipping infra startup. Set ENABLE_INFRA_ON_STARTUP=true to enable it.")
     
@@ -30,8 +36,14 @@ async def lifespan(app: FastAPI):
         print("Shutting down Connections...")
         if consumer_task:
             consumer_task.cancel()
-        await kafka_client.stop_producer()
-        await db_client.close_database_connections()
+        try:
+            await kafka_client.stop_producer()
+        except Exception:
+            pass
+        try:
+            await db_client.close_database_connections()
+        except Exception:
+            pass
 
 app = FastAPI(
     title="Smart Building Safety Platform",

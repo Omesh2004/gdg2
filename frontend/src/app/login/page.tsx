@@ -4,7 +4,6 @@ import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { signInWithGoogle } from "@/lib/auth";
-import { isSupabaseConfigured } from "@/lib/supabase";
 import { SITE_LOGO_PATH } from "@/lib/branding";
 
 export default function LoginPage() {
@@ -17,17 +16,7 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      const { data, error: authError } = await signInWithGoogle();
-      if (authError) {
-        throw authError;
-      }
-
-      if (data?.url) {
-        window.location.assign(data.url);
-        return;
-      }
-
-      router.push("/auth/callback");
+      signInWithGoogle();
     } catch (signInError) {
       setError(signInError instanceof Error ? signInError.message : "Google sign-in failed.");
       setLoading(false);
@@ -56,7 +45,7 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={handleLogin}
-            disabled={loading || !isSupabaseConfigured}
+            disabled={loading}
             className="inline-flex h-12 w-full cursor-pointer items-center justify-center gap-3 rounded-2xl border border-gray-300 bg-white px-4 text-sm font-semibold text-gray-800 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5">

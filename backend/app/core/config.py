@@ -19,13 +19,21 @@ class Settings(BaseSettings):
     NEO4J_USER: str = os.getenv("NEO4J_USER", "neo4j")
     NEO4J_PASSWORD: str = os.getenv("NEO4J_PASSWORD", "secretpassword")
 
-    # Supabase / Postgres Config for future auth + app data
-    SUPABASE_URL: str = os.getenv("SUPABASE_URL", "")
-    SUPABASE_ANON_KEY: str = os.getenv("SUPABASE_ANON_KEY", "")
-    SUPABASE_SERVICE_ROLE_KEY: str = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
-    SUPABASE_DB_URL: str = os.getenv("SUPABASE_DB_URL", "")
-    AUTH_PROVIDER: str = os.getenv("AUTH_PROVIDER", "supabase")
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "")
+    # Database config for Prisma / Supabase Postgres direct access
+    DATABASE_URL: str = os.getenv("DATABASE_URL", os.getenv("SUPABASE_POSTGRES_DIRECT_URL", ""))
+    SUPABASE_POSTGRES_DIRECT_URL: str = os.getenv("SUPABASE_POSTGRES_DIRECT_URL", DATABASE_URL)
+    PRISMA_DATABASE_URL: str = os.getenv("PRISMA_DATABASE_URL", DATABASE_URL)
+    PRISMA_DIRECT_URL: str = os.getenv("PRISMA_DIRECT_URL", DATABASE_URL)
+    SUPABASE_SYNC_DATABASE_URL: str = os.getenv("SUPABASE_SYNC_DATABASE_URL", DATABASE_URL)
+
+    # Google OAuth client config
+    GOOGLE_OAUTH_CLIENT_ID: str = os.getenv("GOOGLE_OAUTH_CLIENT_ID", os.getenv("GOOGLE_CLIENT_ID", ""))
+    GOOGLE_OAUTH_CLIENT_SECRET: str = os.getenv("GOOGLE_OAUTH_CLIENT_SECRET", os.getenv("GOOGLE_CLIENT_SECRET", ""))
+
+    # Backend session config
+    SESSION_JWT_SECRET: str = os.getenv("SESSION_JWT_SECRET", "change-me-in-env")
+    SESSION_COOKIE_NAME: str = os.getenv("SESSION_COOKIE_NAME", "cc_session")
+    SESSION_TTL_MINUTES: int = int(os.getenv("SESSION_TTL_MINUTES", "480"))
 
     # Twilio SMS Config
     TWILIO_ACCOUNT_SID: str = os.getenv("TWILIO_ACCOUNT_SID", "")

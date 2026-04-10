@@ -8,3 +8,4 @@ aiokafka
 neo4j
 redis
 twilio
+psycopg[binary]

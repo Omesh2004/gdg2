@@ -11,6 +11,7 @@ import { SITE_LOGO_PATH } from "@/lib/branding";
 import type { AuthRole } from "@/lib/auth";
 import {
   AlertTriangle,
+  Box,
   ChevronLeft,
   House,
   MessageSquareText,
@@ -29,8 +30,9 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { label: "Home", icon: House, href: "/", roles: ["admin", "security", "staff", "maintenance"] },
-  { label: "Alerts", icon: AlertTriangle, href: "/alerts", roles: ["admin", "security", "staff", "maintenance"] },
-  { label: "People", icon: Users, href: "/people", roles: ["admin", "security", "staff", "maintenance"] },
+  { label: "Alerts", icon: AlertTriangle, href: "/alerts", roles: ["admin", "security"] },
+  { label: "People", icon: Users, href: "/people", roles: ["admin", "security"] },
+  { label: "AR View", icon: Box, href: "/ar-view", roles: ["admin"] },
   { label: "SMS", icon: MessageSquareText, href: "/sms", roles: ["admin", "security"] },
   { label: "Security", icon: Shield, href: "/security", roles: ["admin", "security"] },
   { label: "Maintenance", icon: Wrench, href: "/maintenance", roles: ["admin", "maintenance"] },

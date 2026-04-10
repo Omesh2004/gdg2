@@ -5,7 +5,7 @@ create extension if not exists pgcrypto;
 
 -- Profiles extend Supabase auth.users
 create table if not exists public.profiles (
-  id uuid primary key references auth.users(id) on delete cascade,
+  id uuid primary key,
   full_name text not null,
   email text unique not null,
   role text not null check (role in ('admin', 'security', 'staff', 'maintenance', 'super_admin')),
@@ -19,6 +19,23 @@ create table if not exists public.profiles (
 
 create index if not exists idx_profiles_role on public.profiles(role);
 create index if not exists idx_profiles_email on public.profiles(email);
+
+-- Direct Google OAuth login records (independent from Supabase auth.users)
+create table if not exists public.oauth_login_profiles (
+  id uuid primary key default gen_random_uuid(),
+  email text unique not null,
+  full_name text not null,
+  role text not null default 'staff' check (role in ('admin', 'security', 'staff', 'maintenance', 'super_admin')),
+  avatar_url text,
+  provider text not null default 'google',
+  provider_sub text,
+  last_login_at timestamptz not null default now(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idx_oauth_login_profiles_email on public.oauth_login_profiles(email);
+create index if not exists idx_oauth_login_profiles_role on public.oauth_login_profiles(role);
 
 -- Buildings and floor plans
 create table if not exists public.buildings (
@@ -196,6 +213,7 @@ $$;
 
 -- Apply updated_at trigger across mutable tables
 create trigger trg_profiles_updated_at before update on public.profiles for each row execute function public.set_updated_at();
+create trigger trg_oauth_login_profiles_updated_at before update on public.oauth_login_profiles for each row execute function public.set_updated_at();
 create trigger trg_buildings_updated_at before update on public.buildings for each row execute function public.set_updated_at();
 create trigger trg_floors_updated_at before update on public.floors for each row execute function public.set_updated_at();
 create trigger trg_zones_updated_at before update on public.zones for each row execute function public.set_updated_at();

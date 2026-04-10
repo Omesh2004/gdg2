@@ -2,16 +2,32 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { loadBackendProfile } from "@/lib/auth";
 
 export default function AuthCallbackPage() {
   const router = useRouter();
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      router.replace("/");
-    }, 900);
+    let active = true;
 
-    return () => window.clearTimeout(timer);
+    const completeSignIn = async () => {
+      try {
+        await loadBackendProfile();
+        if (active) {
+          router.replace("/");
+        }
+      } catch {
+        if (active) {
+          router.replace("/login");
+        }
+      }
+    };
+
+    void completeSignIn();
+
+    return () => {
+      active = false;
+    };
   }, [router]);
 
   return (
