@@ -50,7 +50,10 @@ async def receive_anomaly(
         "details": event_dict,
         "anomaly_id": str(result.inserted_id),
     }
-    await manager.broadcast(alert_payload)
+    await manager.broadcast_to_roles(
+        alert_payload,
+        allowed_roles={Role.ADMIN, Role.SECURITY, Role.STAFF, Role.MAINTENANCE},
+    )
     
     return {"status": "Event received and queued", "anomaly_id": str(result.inserted_id)}
 
@@ -95,6 +98,15 @@ async def resolve_anomaly(
     
     if result.matched_count == 0:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Anomaly not found")
+
+    await manager.broadcast_to_roles(
+        {
+            "event_type": "ALERT_RESOLVED",
+            "anomaly_id": anomaly_id,
+            "details": {"resolved_by": user.id},
+        },
+        allowed_roles={Role.ADMIN, Role.SECURITY, Role.STAFF, Role.MAINTENANCE},
+    )
     
     return {"status": "Anomaly resolved", "anomaly_id": anomaly_id}
 

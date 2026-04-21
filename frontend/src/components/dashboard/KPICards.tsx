@@ -7,8 +7,8 @@ import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
 export function KPICards() {
-  const { isEmergencySimulated } = useAppSelector(state => state.system);
   const { activeAlerts } = useAppSelector(state => state.alerts);
+  const hasLiveAlerts = activeAlerts.length > 0;
   
   const [loading, setLoading] = useState(true);
   
@@ -37,14 +37,14 @@ export function KPICards() {
     {
       title: "Active Alerts",
       value: activeAlerts.length.toString(),
-      trend: isEmergencySimulated ? "+100%" : "0%",
-      trendUp: !isEmergencySimulated,
+      trend: hasLiveAlerts ? "+100%" : "0%",
+      trendUp: !hasLiveAlerts,
       icon: AlertTriangle,
-      color: isEmergencySimulated ? "text-red-600" : "text-emerald-600"
+      color: hasLiveAlerts ? "text-red-600" : "text-emerald-600"
     },
     {
       title: "Avg Response",
-      value: isEmergencySimulated ? "4.2m" : "N/A",
+      value: hasLiveAlerts ? "4.2m" : "N/A",
       trend: "-12%",
       trendUp: true,
       icon: ShieldAlert,

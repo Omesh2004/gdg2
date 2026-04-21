@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import { ArrowRight, MessageSquareText, ShieldAlert, Sparkles, UsersRound, View, Shield, Wrench, Activity, AlertTriangle, CalendarClock } from "lucide-react";
 import { useAppSelector } from "@/store/hooks";
 import { cn } from "@/lib/utils";
+import { AlertBanner } from "@/components/dashboard/AlertBanner";
 
 // --- START SHARED MOCK DATA ---
 const metricCards = [
@@ -342,8 +343,18 @@ export default function DashboardPage() {
   const isStandardUser = greetingRole === "staff" || greetingRole === "maintenance";
 
   if (isStandardUser) {
-    return <StandardDashboard greetingName={greetingName} greetingRole={greetingRole} />;
+    return (
+      <>
+        <AlertBanner />
+        <StandardDashboard greetingName={greetingName} greetingRole={greetingRole} />
+      </>
+    );
   }
 
-  return <AdminDashboard greetingName={greetingName} greetingRole={greetingRole} now={now} />;
+  return (
+    <>
+      <AlertBanner />
+      <AdminDashboard greetingName={greetingName} greetingRole={greetingRole} now={now} />
+    </>
+  );
 }

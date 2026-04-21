@@ -5,10 +5,9 @@ import { AlertCircle, ArrowRight, MessageSquareMore } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function AlertBanner() {
-  const { activeAlerts } = useAppSelector(state => state.alerts);
-  const { isEmergencySimulated } = useAppSelector(state => state.system);
+  const { activeAlerts, realtimeConnected } = useAppSelector(state => state.alerts);
 
-  if (!isEmergencySimulated || activeAlerts.length === 0) return null;
+  if (activeAlerts.length === 0) return null;
 
   const topAlert = activeAlerts[0];
 
@@ -21,6 +20,7 @@ export function AlertBanner() {
         <div>
           <h2 className="text-lg font-bold text-red-800 uppercase tracking-tight">Active Emergency</h2>
           <p className="text-sm font-medium text-red-700">{topAlert.message}</p>
+          <p className="text-xs text-red-600 mt-1">Stream: {realtimeConnected ? "Live" : "Reconnecting"}</p>
         </div>
       </div>
       <div className="flex items-center gap-3">
