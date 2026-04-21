@@ -8,50 +8,25 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { toggleSidebar } from "@/store/slices/systemSlice";
 import { cn } from "@/lib/utils";
 import { SITE_LOGO_PATH } from "@/lib/branding";
-import type { AuthRole } from "@/lib/auth";
+import { ROUTE_CONFIG } from "@/lib/routes";
 import {
-  AlertTriangle,
-  Box,
   ChevronLeft,
-  House,
-  MessageSquareText,
-  Settings,
-  Shield,
-  Users,
-  Wrench,
 } from "lucide-react";
-
-type NavItem = {
-  label: string;
-  icon: typeof House;
-  href: string;
-  roles: AuthRole[];
-};
-
-const navItems: NavItem[] = [
-  { label: "Home", icon: House, href: "/", roles: ["admin", "security", "staff", "maintenance"] },
-  { label: "Alerts", icon: AlertTriangle, href: "/alerts", roles: ["admin", "security"] },
-  { label: "People", icon: Users, href: "/people", roles: ["admin", "security"] },
-  { label: "AR View", icon: Box, href: "/ar-view", roles: ["admin"] },
-  { label: "SMS", icon: MessageSquareText, href: "/sms", roles: ["admin", "security"] },
-  { label: "Security", icon: Shield, href: "/security", roles: ["admin", "security"] },
-  { label: "Maintenance", icon: Wrench, href: "/maintenance", roles: ["admin", "maintenance"] },
-  { label: "Settings", icon: Settings, href: "/settings", roles: ["admin", "security", "staff", "maintenance"] },
-];
 
 export function Sidebar() {
   const pathname = usePathname();
   const dispatch = useAppDispatch();
   const isSidebarCollapsed = useAppSelector((state) => state.system.isSidebarCollapsed);
-  const currentRole = useAppSelector((state) => state.auth.profile?.role ?? state.system.currentUserRole);
+  const rawRole = useAppSelector((state) => state.auth.profile?.role ?? state.system.currentUserRole);
+  const currentRole = String(rawRole).toLowerCase();
 
   const activeRoot = useMemo(() => {
-    const match = navItems.find((item) => item.href !== "/" && pathname.startsWith(item.href));
+    const match = ROUTE_CONFIG.find((item) => item.href !== "/" && pathname.startsWith(item.href));
     return match?.href || "/";
   }, [pathname]);
 
   const visibleItems = useMemo(
-    () => navItems.filter((item) => item.roles.includes(currentRole)),
+    () => ROUTE_CONFIG.filter((item) => item.roles.some((role) => role === currentRole)),
     [currentRole]
   );
 

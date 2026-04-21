@@ -1,4 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import type { AuthRole } from '@/lib/auth';
 
 interface SystemState {
   isActive: boolean;
@@ -6,7 +7,7 @@ interface SystemState {
   currentBuilding: string;
   currentFloor: string;
   isSidebarCollapsed: boolean;
-  currentUserRole: 'admin' | 'security' | 'staff' | 'maintenance';
+  currentUserRole: AuthRole;
 }
 
 const initialState: SystemState = {
@@ -15,7 +16,7 @@ const initialState: SystemState = {
   currentBuilding: "Main Building",
   currentFloor: "Floor 3",
   isSidebarCollapsed: false,
-  currentUserRole: 'admin',
+  currentUserRole: 'admin' as AuthRole,
 };
 
 export const systemSlice = createSlice({
@@ -34,7 +35,7 @@ export const systemSlice = createSlice({
     toggleSidebar: (state) => {
       state.isSidebarCollapsed = !state.isSidebarCollapsed;
     },
-    setUserRole: (state, action: PayloadAction<SystemState['currentUserRole']>) => {
+    setUserRole: (state, action: PayloadAction<AuthRole>) => {
       state.currentUserRole = action.payload;
     },
   },

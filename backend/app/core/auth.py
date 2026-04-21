@@ -5,10 +5,11 @@ import json
 import time
 from typing import Any
 
-from fastapi import Cookie, HTTPException, Request, status
+from fastapi import Cookie, Depends, HTTPException, Request, status
 
 from app.core.config import settings
-from app.services.auth_service import AuthProfile, decode_signed_token
+from app.services.auth_service import AuthProfile, decode_signed_token, resolve_user_role_by_email
+import asyncio
 
 
 def _safe_json_loads(value: str) -> dict[str, Any]:
@@ -71,10 +72,28 @@ async def get_current_user(request: Request) -> AuthProfile:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
 
     payload = decode_signed_token(token)
+    email = str(payload.get("email", ""))
+    
+    # Dynamically resolve role from the database to ensure we have the most up-to-date permissions
+    dynamic_role = await asyncio.to_thread(
+        resolve_user_role_by_email, email, str(payload.get("role", "staff"))
+    )
+    
     return AuthProfile(
         id=str(payload.get("sub", "")),
-        email=str(payload.get("email", "")),
+        email=email,
         fullName=str(payload.get("full_name", "")),
-        role=str(payload.get("role", "staff")),
+        role=dynamic_role,
         avatarUrl=payload.get("avatar_url"),
     )
+
+
+def require_roles(allowed_roles: list[str]):
+    def role_checker(current_user: AuthProfile = Depends(get_current_user)) -> AuthProfile:
+        if current_user.role not in allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Role '{current_user.role}' is not authorized to perform this action.",
+            )
+        return current_user
+    return role_checker

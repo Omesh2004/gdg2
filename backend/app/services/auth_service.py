@@ -16,6 +16,7 @@ from pydantic import BaseModel
 import psycopg
 
 from app.core.config import settings
+from app.core.rbac import Role
 
 GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
@@ -28,6 +29,88 @@ class AuthProfile(BaseModel):
     fullName: str
     role: str
     avatarUrl: str | None
+
+
+ROLE_PRIORITY: dict[str, int] = {
+    Role.ADMIN.value: 5,
+    Role.SECURITY.value: 4,
+    Role.STAFF.value: 3,
+    Role.MAINTENANCE.value: 2,
+    Role.GUEST.value: 1,
+}
+
+
+def _normalize_role(role: str | None) -> str:
+    value = str(role or "").strip().lower()
+    if value in ROLE_PRIORITY:
+        return value
+    return Role.GUEST.value
+
+
+def _choose_highest_role(candidates: list[str | None]) -> str:
+    normalized = [_normalize_role(candidate) for candidate in candidates if candidate is not None]
+    if not normalized:
+        return Role.GUEST.value
+    return max(normalized, key=lambda role: ROLE_PRIORITY.get(role, 0))
+
+
+def resolve_user_role_by_email(email: str, fallback_role: str | None = None) -> str:
+    """Resolve the effective role for a user email from DB tables.
+
+    Priority is based on role hierarchy and considers both:
+    - public.profiles
+    - public.oauth_login_profiles
+    """
+    db_url = _normalized_database_url()
+    normalized_email = str(email).strip().lower()
+
+    if not normalized_email:
+        return _normalize_role(fallback_role)
+
+    profiles_role: str | None = None
+    oauth_role: str | None = None
+
+    with psycopg.connect(db_url) as conn:
+        conn.autocommit = True
+        with conn.cursor() as cur:
+            try:
+                cur.execute(
+                    """
+                    select role
+                    from public.profiles
+                    where lower(email) = %s
+                    limit 1
+                    """,
+                    (normalized_email,),
+                )
+                row = cur.fetchone()
+                if row:
+                    profiles_role = str(row[0])
+            except Exception:
+                # Ignore table/schema incompatibilities and continue with fallbacks.
+                pass
+
+            try:
+                cur.execute(
+                    """
+                    select role
+                    from public.oauth_login_profiles
+                    where lower(email) = %s
+                    limit 1
+                    """,
+                    (normalized_email,),
+                )
+                row = cur.fetchone()
+                if row:
+                    oauth_role = str(row[0])
+            except Exception:
+                pass
+
+    if profiles_role is not None:
+        return _normalize_role(profiles_role)
+    if oauth_role is not None:
+        return _normalize_role(oauth_role)
+    return _normalize_role(fallback_role)
 
 
 def _normalized_database_url() -> str:
@@ -50,6 +133,7 @@ def _normalized_database_url() -> str:
 
 def upsert_login_profile(profile: AuthProfile) -> AuthProfile:
     db_url = _normalized_database_url()
+    effective_role = resolve_user_role_by_email(profile.email, fallback_role=profile.role)
 
     with psycopg.connect(db_url) as conn:
         conn.autocommit = True
@@ -60,7 +144,7 @@ def upsert_login_profile(profile: AuthProfile) -> AuthProfile:
                   id uuid primary key default gen_random_uuid(),
                   email text unique not null,
                   full_name text not null,
-                  role text not null default 'staff' check (role in ('admin', 'security', 'staff', 'maintenance', 'super_admin')),
+                  role text not null default 'staff',
                   avatar_url text,
                   provider text not null default 'google',
                   provider_sub text,
@@ -72,17 +156,18 @@ def upsert_login_profile(profile: AuthProfile) -> AuthProfile:
             )
             cur.execute(
                 """
-                insert into public.oauth_login_profiles (email, full_name, avatar_url)
-                values (%s, %s, %s)
+                                insert into public.oauth_login_profiles (email, full_name, avatar_url, role)
+                                values (%s, %s, %s, %s)
                 on conflict (email)
                 do update set
                   full_name = excluded.full_name,
                   avatar_url = excluded.avatar_url,
+                                    role = excluded.role,
                   last_login_at = now(),
                   updated_at = now()
                 returning id, email, full_name, role, avatar_url
                 """,
-                (profile.email, profile.fullName, profile.avatarUrl),
+                                (profile.email, profile.fullName, profile.avatarUrl, effective_role),
             )
             row = cur.fetchone()
 
@@ -96,11 +181,12 @@ def upsert_login_profile(profile: AuthProfile) -> AuthProfile:
                     do update set
                       full_name = excluded.full_name,
                       email = excluded.email,
+                                            role = excluded.role,
                       avatar_url = excluded.avatar_url,
                       last_login_at = now(),
                       updated_at = now()
                     """,
-                    (profile.id, profile.fullName, profile.email, profile.role, profile.avatarUrl),
+                                        (profile.id, profile.fullName, profile.email, effective_role, profile.avatarUrl),
                 )
             except Exception:
                 # Ignore incompatibility (e.g., FK to auth.users) and rely on oauth_login_profiles.
@@ -191,7 +277,7 @@ def build_profile_from_google_userinfo(userinfo: dict[str, Any]) -> AuthProfile:
         id=stable_uuid,
         email=email,
         fullName=full_name,
-        role="staff",
+        role=resolve_user_role_by_email(email, fallback_role=Role.GUEST.value),
         avatarUrl=avatar_url,
     )
 

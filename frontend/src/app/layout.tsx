@@ -9,6 +9,8 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { TopNavbar } from "@/components/layout/TopNavbar";
 import { useAppSelector } from "@/store/hooks";
 import { SITE_LOGO_PATH } from "@/lib/branding";
+import { getAllowedRolesForPath } from "@/lib/routes";
+import { normalizeRole } from "@/lib/auth";
 
 const manrope = Manrope({ subsets: ["latin"], variable: "--font-manrope" });
 
@@ -17,14 +19,26 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const authStatus = useAppSelector((state) => state.auth.status);
+  const currentRole = useAppSelector((state) => state.auth.profile?.role ?? state.system.currentUserRole);
   const isAuthRoute = pathname.startsWith("/login") || pathname.startsWith("/auth/callback") || pathname.startsWith("/preview");
   const isSidebarCollapsed = useAppSelector((s) => s.system.isSidebarCollapsed);
 
   useEffect(() => {
     if (!isAuthRoute && authStatus === "unauthenticated") {
       router.replace("/login");
+      return;
     }
-  }, [authStatus, isAuthRoute, router]);
+
+    if (!isAuthRoute && authStatus === "authenticated") {
+      const allowedRoles = getAllowedRolesForPath(pathname);
+      // Normalize currentRole to ensure it's a valid string role
+      const normalizedRole = normalizeRole(currentRole);
+      // If path has defined roles and the user lacks them, bounce back to safe dashboard
+      if (allowedRoles && !allowedRoles.includes(normalizedRole)) {
+        router.replace("/");
+      }
+    }
+  }, [authStatus, currentRole, isAuthRoute, pathname, router]);
 
   if (isAuthRoute) {
     return <>{children}</>;

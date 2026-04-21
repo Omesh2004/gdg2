@@ -1,11 +1,20 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from app.core.dependencies import get_neo4j, get_redis
+from app.core.rbac_middleware import require_permission, require_at_least_role
+from app.core.rbac import Permission, Role
+from app.services.auth_service import AuthProfile
+from app.core.auth import get_current_user
 from app.services.graph_engine import graph_engine
 
 router = APIRouter()
 
-@router.get("/evacuate/{mac_address}")
-async def get_evacuation_route(mac_address: str, neo4j_session=Depends(get_neo4j), redis=Depends(get_redis)):
+@router.get("/evacuate/{mac_address}", dependencies=[Depends(require_permission(Permission.ROUTING_CALCULATE))])
+async def get_evacuation_route(
+    mac_address: str,
+    neo4j_session=Depends(get_neo4j),
+    redis=Depends(get_redis),
+    user: AuthProfile = Depends(get_current_user),
+):
     """
     Get the safest path for a specific user to the nearest exit,
     avoiding active anomaly zones (e.g., Fire on Floor 2).

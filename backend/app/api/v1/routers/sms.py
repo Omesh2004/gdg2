@@ -2,8 +2,13 @@ import asyncio
 import re
 from typing import List
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, field_validator
+
+from app.core.rbac_middleware import require_roles, require_permission
+from app.core.rbac import Role, Permission
+from app.core.auth import get_current_user
+from app.services.auth_service import AuthProfile
 
 from app.services.twilio_service import twilio_service
 
@@ -51,8 +56,8 @@ class BroadcastSMSRequest(BaseModel):
         return cleaned
 
 
-@router.post("/send")
-async def send_sms(payload: SMSRequest):
+@router.post("/send", dependencies=[Depends(require_roles(Role.ADMIN, Role.SECURITY))])
+async def send_sms(payload: SMSRequest, user: AuthProfile = Depends(get_current_user)):
     if not twilio_service.is_configured():
         raise HTTPException(status_code=500, detail="Twilio configuration is missing in backend environment")
 
@@ -63,8 +68,8 @@ async def send_sms(payload: SMSRequest):
         raise HTTPException(status_code=500, detail=f"Failed to send SMS: {exc}")
 
 
-@router.post("/broadcast")
-async def broadcast_sms(payload: BroadcastSMSRequest):
+@router.post("/broadcast", dependencies=[Depends(require_roles(Role.ADMIN, Role.SECURITY))])
+async def broadcast_sms(payload: BroadcastSMSRequest, user: AuthProfile = Depends(get_current_user)):
     if not twilio_service.is_configured():
         raise HTTPException(status_code=500, detail="Twilio configuration is missing in backend environment")
 

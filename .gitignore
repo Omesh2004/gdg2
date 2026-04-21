@@ -2,12 +2,20 @@
 # OS / Editor
 # -----------------------------
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
 Desktop.ini
 .vscode/
+.vscode-test/
 .idea/
 *.swp
 *.swo
+*.sublime-workspace
+*.sublime-project
 
 # -----------------------------
 # Environment / Secrets
@@ -18,9 +26,11 @@ Desktop.ini
 !.env.local.example
 *.pem
 *.key
+docker-compose.override.yml
+docker-compose.local.yml
 
 # -----------------------------
-# Python
+# Python Backend
 # -----------------------------
 __pycache__/
 *.py[cod]
@@ -28,58 +38,83 @@ __pycache__/
 *.pyd
 *.pyo
 *.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
 .coverage
 .coverage.*
+.tox/
+.nox/
 htmlcov/
-
-# Virtual environments
 .venv/
 venv/
-env/
 ENV/
-
-# Packaging / build
-build/
-dist/
-*.egg-info/
-.eggs/
-
-# Jupyter
-.ipynb_checkpoints/
-
-# Logs
-*.log
-*.out
-*.err
+env.bak/
+venv.bak/
+backend/.pytest_cache/
+backend/__pycache__/
+backend/app/**/__pycache__/
 
 # -----------------------------
-# Node / Next.js
+# Node / Frontend
 # -----------------------------
 node_modules/
-.next/
-out/
-coverage/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+lerna-debug.log*
+.pnpm-store
+frontend/node_modules/
+
+# Next.js
+.next/
+out/
+.swc/
+frontend/.next/
+frontend/out/
+
+# Testing
+coverage/
+cypress/videos/
+cypress/screenshots/
+
+# -----------------------------
+# Logs & Databases
+# -----------------------------
+*.log
+*.out
+*.err
+*.sqlite3
+*.db
+backend/*.sqlite3
 
 # -----------------------------
 # Project-specific generated artifacts
 # -----------------------------
 edge_ai/__pycache__/
-backend/__pycache__/
-backend/app/**/__pycache__/
 edge_ai/video/
-
-# Optional local data/artifacts
-*.sqlite3
-*.db
-
-# -----------------------------
-# Docker overrides (keep compose files tracked)
-# -----------------------------
 .docker/
+.gemini/
+.qodo/
+.sixth/
+scratch/
+brain/
+*scratch*
+

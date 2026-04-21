@@ -8,7 +8,7 @@ create table if not exists public.profiles (
   id uuid primary key,
   full_name text not null,
   email text unique not null,
-  role text not null check (role in ('admin', 'security', 'staff', 'maintenance', 'super_admin')),
+  role text not null,
   avatar_url text,
   phone text,
   is_active boolean not null default true,
@@ -25,7 +25,7 @@ create table if not exists public.oauth_login_profiles (
   id uuid primary key default gen_random_uuid(),
   email text unique not null,
   full_name text not null,
-  role text not null default 'staff' check (role in ('admin', 'security', 'staff', 'maintenance', 'super_admin')),
+  role text not null default 'staff',
   avatar_url text,
   provider text not null default 'google',
   provider_sub text,
@@ -212,14 +212,23 @@ end;
 $$;
 
 -- Apply updated_at trigger across mutable tables
+drop trigger if exists trg_profiles_updated_at on public.profiles;
 create trigger trg_profiles_updated_at before update on public.profiles for each row execute function public.set_updated_at();
+drop trigger if exists trg_oauth_login_profiles_updated_at on public.oauth_login_profiles;
 create trigger trg_oauth_login_profiles_updated_at before update on public.oauth_login_profiles for each row execute function public.set_updated_at();
+drop trigger if exists trg_buildings_updated_at on public.buildings;
 create trigger trg_buildings_updated_at before update on public.buildings for each row execute function public.set_updated_at();
+drop trigger if exists trg_floors_updated_at on public.floors;
 create trigger trg_floors_updated_at before update on public.floors for each row execute function public.set_updated_at();
+drop trigger if exists trg_zones_updated_at on public.zones;
 create trigger trg_zones_updated_at before update on public.zones for each row execute function public.set_updated_at();
+drop trigger if exists trg_events_updated_at on public.events;
 create trigger trg_events_updated_at before update on public.events for each row execute function public.set_updated_at();
+drop trigger if exists trg_broadcasts_updated_at on public.broadcasts;
 create trigger trg_broadcasts_updated_at before update on public.broadcasts for each row execute function public.set_updated_at();
+drop trigger if exists trg_broadcast_recipients_updated_at on public.broadcast_recipients;
 create trigger trg_broadcast_recipients_updated_at before update on public.broadcast_recipients for each row execute function public.set_updated_at();
+drop trigger if exists trg_routes_updated_at on public.routes;
 create trigger trg_routes_updated_at before update on public.routes for each row execute function public.set_updated_at();
 
 -- Row-level security can be enabled once auth is wired.
@@ -227,3 +236,12 @@ create trigger trg_routes_updated_at before update on public.routes for each row
 -- alter table public.events enable row level security;
 -- alter table public.broadcasts enable row level security;
 -- alter table public.audit_logs enable row level security;
+
+-- Drop check constraints if they exist to allow dynamic roles
+do $$
+begin
+  alter table public.profiles drop constraint if exists profiles_role_check;
+  alter table public.oauth_login_profiles drop constraint if exists oauth_login_profiles_role_check;
+exception
+  when others then null;
+end $$;
