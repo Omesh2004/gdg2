@@ -26,6 +26,13 @@ class Settings(BaseSettings):
     PRISMA_DIRECT_URL: str = os.getenv("PRISMA_DIRECT_URL", DATABASE_URL)
     SUPABASE_SYNC_DATABASE_URL: str = os.getenv("SUPABASE_SYNC_DATABASE_URL", DATABASE_URL)
 
+    # Supabase REST API (for role lookups when direct Postgres is unreachable)
+    SUPABASE_URL: str = os.getenv("SUPABASE_URL", "")
+    SUPABASE_SERVICE_KEY: str = os.getenv("SUPABASE_SERVICE_KEY", "")
+
+    # Comma-separated list of admin emails (bypass DB for role assignment)
+    ADMIN_EMAILS: str = os.getenv("ADMIN_EMAILS", "")
+
     # Google OAuth client config
     GOOGLE_OAUTH_CLIENT_ID: str = os.getenv("GOOGLE_OAUTH_CLIENT_ID", os.getenv("GOOGLE_CLIENT_ID", ""))
     GOOGLE_OAUTH_CLIENT_SECRET: str = os.getenv("GOOGLE_OAUTH_CLIENT_SECRET", os.getenv("GOOGLE_CLIENT_SECRET", ""))

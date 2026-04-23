@@ -125,3 +125,8 @@ volumes:
 networks:
   smart-building-net:
     driver: bridge
+    enable_ipv6: true
+    ipam:
+      config:
+        - subnet: "172.30.0.0/16"
+        - subnet: "fd12:3456:789a::/48"

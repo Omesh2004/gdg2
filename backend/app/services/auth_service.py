@@ -55,22 +55,72 @@ def _choose_highest_role(candidates: list[str | None]) -> str:
 
 
 def resolve_user_role_by_email(email: str, fallback_role: str | None = None) -> str:
-    """Resolve the effective role for a user email from DB tables.
+    """Resolve the effective role for a user email from the database.
 
-    Priority is based on role hierarchy and considers both:
-    - public.profiles
-    - public.oauth_login_profiles
+    Resolution order:
+    1. Supabase REST API over HTTPS (if configured)
+    2. Direct Postgres connection
     """
-    db_url = _normalized_database_url()
     normalized_email = str(email).strip().lower()
 
     if not normalized_email:
         return _normalize_role(fallback_role)
 
+    # 1. Try Supabase REST API over HTTPS (works from Docker)
+    rest_role = _resolve_role_via_rest_api(normalized_email)
+    if rest_role is not None:
+        print(f"[auth] Role for {normalized_email}: {rest_role} (from Supabase REST API)")
+        return _normalize_role(rest_role)
+
+    # 2. Direct Postgres connection
+    try:
+        pg_role = _resolve_role_via_postgres(normalized_email)
+        if pg_role is not None:
+            print(f"[auth] Role for {normalized_email}: {pg_role} (from Postgres)")
+            return _normalize_role(pg_role)
+    except Exception as exc:
+        print(f"[auth-warning] Postgres role lookup failed: {exc}")
+
+    result = _normalize_role(fallback_role)
+    print(f"[auth] Role for {normalized_email}: {result} (fallback)")
+    return result
+
+
+def _resolve_role_via_rest_api(email: str) -> str | None:
+    """Query Supabase PostgREST API over HTTPS for the user's role."""
+    supabase_url = settings.SUPABASE_URL.strip().rstrip("/")
+    service_key = settings.SUPABASE_SERVICE_KEY.strip()
+
+    if not supabase_url or not service_key:
+        return None
+
+    for table in ("profiles", "oauth_login_profiles"):
+        try:
+            url = f"{supabase_url}/rest/v1/{table}?email=eq.{quote(email)}&select=role&limit=1"
+            req = Request(url, headers={
+                "apikey": service_key,
+                "Authorization": f"Bearer {service_key}",
+                "Accept": "application/json",
+            })
+            with urlopen(req, timeout=5) as resp:
+                rows = json.loads(resp.read().decode("utf-8"))
+                if rows and rows[0].get("role"):
+                    return str(rows[0]["role"])
+        except Exception as exc:
+            print(f"[auth-warning] REST API lookup in {table} failed: {exc}")
+            continue
+
+    return None
+
+
+def _resolve_role_via_postgres(email: str) -> str | None:
+    """Query Supabase Postgres directly for the user's role."""
+    db_url = _normalized_database_url()
+
     profiles_role: str | None = None
     oauth_role: str | None = None
 
-    with psycopg.connect(db_url) as conn:
+    with psycopg.connect(db_url, connect_timeout=5) as conn:
         conn.autocommit = True
         with conn.cursor() as cur:
             try:
@@ -81,13 +131,12 @@ def resolve_user_role_by_email(email: str, fallback_role: str | None = None) -> 
                     where lower(email) = %s
                     limit 1
                     """,
-                    (normalized_email,),
+                    (email,),
                 )
                 row = cur.fetchone()
                 if row:
                     profiles_role = str(row[0])
             except Exception:
-                # Ignore table/schema incompatibilities and continue with fallbacks.
                 pass
 
             try:
@@ -98,7 +147,7 @@ def resolve_user_role_by_email(email: str, fallback_role: str | None = None) -> 
                     where lower(email) = %s
                     limit 1
                     """,
-                    (normalized_email,),
+                    (email,),
                 )
                 row = cur.fetchone()
                 if row:
@@ -107,10 +156,10 @@ def resolve_user_role_by_email(email: str, fallback_role: str | None = None) -> 
                 pass
 
     if profiles_role is not None:
-        return _normalize_role(profiles_role)
+        return profiles_role
     if oauth_role is not None:
-        return _normalize_role(oauth_role)
-    return _normalize_role(fallback_role)
+        return oauth_role
+    return None
 
 
 def _normalized_database_url() -> str:
@@ -273,11 +322,17 @@ def build_profile_from_google_userinfo(userinfo: dict[str, Any]) -> AuthProfile:
 
     stable_uuid = str(uuid.uuid5(uuid.NAMESPACE_URL, f"google:{google_sub or email}"))
 
+    try:
+        role = resolve_user_role_by_email(email, fallback_role=Role.GUEST.value)
+    except Exception as exc:
+        print(f"[auth-warning] DB role lookup failed, falling back to guest: {exc}")
+        role = Role.GUEST.value
+
     return AuthProfile(
         id=stable_uuid,
         email=email,
         fullName=full_name,
-        role=resolve_user_role_by_email(email, fallback_role=Role.GUEST.value),
+        role=role,
         avatarUrl=avatar_url,
     )
 

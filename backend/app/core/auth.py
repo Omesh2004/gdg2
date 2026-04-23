@@ -75,9 +75,15 @@ async def get_current_user(request: Request) -> AuthProfile:
     email = str(payload.get("email", ""))
     
     # Dynamically resolve role from the database to ensure we have the most up-to-date permissions
-    dynamic_role = await asyncio.to_thread(
-        resolve_user_role_by_email, email, str(payload.get("role", "staff"))
-    )
+    jwt_role = str(payload.get("role", "staff"))
+    try:
+        dynamic_role = await asyncio.to_thread(
+            resolve_user_role_by_email, email, jwt_role
+        )
+    except Exception as exc:
+        # If DB is unreachable, fall back to the role embedded in the JWT
+        print(f"[auth-warning] DB role lookup failed in get_current_user, using JWT role: {exc}")
+        dynamic_role = jwt_role
     
     return AuthProfile(
         id=str(payload.get("sub", "")),
